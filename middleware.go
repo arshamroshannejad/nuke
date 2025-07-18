@@ -32,7 +32,7 @@ func DefaultCORSOptions() *CORSOptions {
 	}
 }
 
-func CORS(options *CORSOptions) func(http.Handler) http.Handler {
+func CorsMiddleware(options *CORSOptions) func(http.Handler) http.Handler {
 	if options == nil {
 		options = DefaultCORSOptions()
 	}
@@ -68,7 +68,7 @@ func CORS(options *CORSOptions) func(http.Handler) http.Handler {
 	}
 }
 
-func Heartbeat(endpoint string) func(http.Handler) http.Handler {
+func HeartbeatMiddleware(endpoint string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if (r.Method == "GET" || r.Method == "HEAD") && strings.EqualFold(r.URL.Path, endpoint) {
@@ -83,7 +83,7 @@ func Heartbeat(endpoint string) func(http.Handler) http.Handler {
 	}
 }
 
-func Timeout(duration time.Duration) func(http.Handler) http.Handler {
+func TimeoutMiddleware(duration time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, cancel := context.WithTimeout(r.Context(), duration)
@@ -111,16 +111,14 @@ func Timeout(duration time.Duration) func(http.Handler) http.Handler {
 	}
 }
 
-func Recover() func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
-				if err := recover(); err != nil {
-					log.Printf("Recovered panic from request handler : %v", err)
-					w.WriteHeader(http.StatusInternalServerError)
-				}
-			}()
-			next.ServeHTTP(w, r)
-		})
-	}
+func RecoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("Recovered panic from request handler : %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
